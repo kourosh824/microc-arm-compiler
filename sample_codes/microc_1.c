@@ -1,0 +1,8 @@
+// Sample code with addition
+int main() {
+	int a, b, c;
+	a = 17;
+	b = 42;
+	c = a + b;
+	return c;
+}
