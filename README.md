@@ -1,8 +1,6 @@
 # microc-arm-compiler
 A basic compiler that takes C MLIR and compiles it to ARM assembly using xDSL.
 
-μπλα μπλα μπλα μπλα μπλα mploy
-
 ## Πριν γράψουμε κώδικα
 1. Προτείνω πολύ να κάνετε όλη την εργασία σε κάποιο Linux λειτουργικό.
 2. Κατεβάζετε αρχικά το clang. Αν δεν ξέρετε πώς γίνεται με τον εξής τρόπο:
