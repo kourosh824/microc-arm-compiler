@@ -29,8 +29,8 @@ with open(f"./sample_codes/{MICROC_CODE}", "r") as f:
 print("Successfully loaded MLIR into xDSL!")
 
 # Uncomment if you want to see the end result
-# for op in module.walk():
-#     print(f'found op with name {op.name}')
+for op in module.walk():
+    print(f'before lowering: found op with name {op.name}')
 
 patterns = GreedyRewritePatternApplier([
     LowerLLVMToRISCV(),
@@ -40,4 +40,4 @@ walker = PatternRewriteWalker(patterns)
 walker.rewrite_module(module)
 
 for op in module.walk():
-    print(f'{op}')
+    print(f'after lowering: found op {op}')
