@@ -1,0 +1,8 @@
+li t0, 1
+li t1, 0
+li t2, 55
+li t3, 5
+mul t4, t2, t3
+add t5, t4, t3
+sub t6, t5, t2
+mul t7, t6, t5
