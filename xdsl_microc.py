@@ -5,16 +5,20 @@ from xdsl.dialects.llvm import LLVM
 from xdsl.dialects.dlti import DLTI
 from xdsl.printer import Printer
 
-from xdsl_arm_backend import ARMBackend
+from xdsl_arm_backend import ARMBackend, BrOp, CondBrOp
 
 # If you add new microC codes please replace this name
-MICROC_CODE = "microc_2.mlir"
+MICROC_CODE = "microc_3.mlir"
 
 ctx = Context()
 # Load all these following dialects
 ctx.load_dialect(Builtin)
 ctx.load_dialect(LLVM)
 ctx.load_dialect(DLTI)
+
+# Loading new LLVM operations
+ctx.load_op(BrOp)
+ctx.load_op(CondBrOp)
 
 printer = Printer()
 

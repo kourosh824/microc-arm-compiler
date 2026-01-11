@@ -1,22 +1,82 @@
-from xdsl.dialects.llvm import StoreOp, ConstantOp, AddOp, LoadOp, SubOp, MulOp, AllocaOp, ReturnOp, ICmpOp
+from xdsl.dialects.builtin import (
+    I1,
+    ArrayAttr,
+    IntegerAttr,
+    i32
+)
+from xdsl.dialects.llvm import (
+    StoreOp,
+    ConstantOp,
+    AddOp,
+    LoadOp,
+    SubOp,
+    MulOp,
+    AllocaOp,
+    ReturnOp,
+    ICmpOp
+)
+from xdsl.irdl.operations import (
+    IRDLOperation,
+    AttrSizedOperandSegments,
+    irdl_op_definition,
+    successor_def,
+    var_operand_def,
+    operand_def
+)
+
+# llvm.br ^bb1
+# llvm.cond_br %c, ^bb1, ^bb2
+@irdl_op_definition
+class BrOp(IRDLOperation):
+    name = 'llvm.br'
+    # Branch ops jump to BLOCKS and these block references are called successors
+    # So dest contains a reference to a target basic block
+    dest = successor_def()
+    # A variable-length list of operands
+    # llvm.br ^bb1(%x, %y, %z), %x, %y, %z are block arguments
+    dest_args = var_operand_def()
+
+    def __init__(self, dest, args=[]):
+        super().__init__(successors=[dest], operands=[args])
+
+# llvm.cond_br has three operand segments, [cond][true_args][false_args]
+@irdl_op_definition
+class CondBrOp(IRDLOperation):
+    name = 'llvm.cond_br'
+
+    # Branch condition
+    cond = operand_def(I1)
+
+    # Branch targets
+    true_dest = successor_def()
+    false_dest = successor_def()
+
+    args = var_operand_def()
+
+    def __init__(self, cond, tdest, fdest, args=None):
+        if args is None:
+            args = []
+        super().__init__(
+            operands=[cond, *args],
+            successors=[tdest, fdest]
+        )
 
 class ARMBackend:
-    # Current register index, how many registers we have used till now
-    reg_index = 0
-    # Mapping LLVM memory to register
-    value_reg_map = {}
-    # Storing all store operands
-    # Basically we don't want to use the stack. In MLIR LLVM, each value is 
-    # first saved as a constant, then a memory space is allocated for it,
-    # then this constant is stored at that memory space and THEN we load this address.
-    # We don't want to do all of this that's why we just define
-    # an li instruction per each constant.
-    store_operands = []
-    # Final parsed code
-    parsed_code = []
-
     def __init__(self, module):
         self.module = module
+        # Current register index, how many registers we have used till now
+        self.reg_index = 0
+        # Mapping LLVM memory to register
+        self.value_reg_map = {}
+        # Storing all store operands
+        # Basically we don't want to use the stack. In MLIR LLVM, each value is 
+        # first saved as a constant, then a memory space is allocated for it,
+        # then this constant is stored at that memory space and THEN we load this address.
+        # We don't want to do all of this that's why we just define
+        # an li instruction per each constant.
+        self.store_operands = []
+        # Final parsed code
+        self.parsed_code = []
 
     # What is returned when this object is printed
     def __str__(self):
@@ -101,18 +161,25 @@ class ARMBackend:
                 self.parsed_code.append(f'{self.instruction_type(op)} {rout}, {r1}, {r2}')
                 continue
                 
-            if op.name == "llvm.br":
-                label = op.successors[0].name
-                self.parsed_code.append(f"b {label}")
+            if isinstance(op, BrOp):
+                print(op.name)
+                print(op.dest)
+                # label = op.successors[0].name
+                # self.parsed_code.append(f"b {label}")
                 continue
 
-            if op.name == "llvm.cond_br":
-                cond = self.value_reg_map[op.operands[0]]
-                t = op.successors[0].name
-                f = op.successors[1].name
-                self.parsed_code.append(f"cmp {cond}, #0")
-                self.parsed_code.append(f"bne {t}")
-                self.parsed_code.append(f"b {f}")
+            if isinstance(op, CondBrOp):
+                print(op.name)
+                print(op.cond)
+                print(op.true_dest)
+                print(op.false_dest)
+                print('\n')
+                # cond = self.value_reg_map[op.operands[0]]
+                # t = op.successors[0].name
+                # f = op.successors[1].name
+                # self.parsed_code.append(f"cmp {cond}, #0")
+                # self.parsed_code.append(f"bne {t}")
+                # self.parsed_code.append(f"b {f}")
                 continue
 
     # Save code in the currect directory

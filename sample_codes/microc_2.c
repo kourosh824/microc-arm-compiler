@@ -1,4 +1,3 @@
-// Sample code with addition
 int main() {
 	int a, b, c, d, e, f;
 	a = 55;
