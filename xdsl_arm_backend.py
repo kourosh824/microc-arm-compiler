@@ -1,6 +1,6 @@
 from xdsl.dialects.llvm import StoreOp, ConstantOp, AddOp, LoadOp, SubOp, MulOp
 
-class ARMParser:
+class ARMBackend:
     # List of available ARM registers
     reg_names = ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10']
     # Current register index, how many registers we have used till now

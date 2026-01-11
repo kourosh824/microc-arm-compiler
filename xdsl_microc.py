@@ -5,7 +5,7 @@ from xdsl.dialects.llvm import LLVM
 from xdsl.dialects.dlti import DLTI
 from xdsl.printer import Printer
 
-from xdsl_arm_parser import ARMParser
+from xdsl_arm_backend import ARMBackend
 
 # If you add new microC codes please replace this name
 MICROC_CODE = "microc_2.mlir"
@@ -23,7 +23,7 @@ with open(f"./sample_codes/{MICROC_CODE}", "r") as f:
     module = parser.parse_module()
 
 print("Successfully loaded MLIR into xDSL!")
-arm = ARMParser(module)
+arm = ARMBackend(module)
 arm.walk()
 print(arm.parsed_code)
 arm.save_code('./sample_codes', 'arm_code')
