@@ -1,8 +1,6 @@
-from xdsl.dialects.llvm import StoreOp, ConstantOp, AddOp, LoadOp, SubOp, MulOp
+from xdsl.dialects.llvm import StoreOp, ConstantOp, AddOp, LoadOp, SubOp, MulOp, AllocaOp, ReturnOp, ICmpOp
 
 class ARMBackend:
-    # List of available ARM registers
-    reg_names = ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10']
     # Current register index, how many registers we have used till now
     reg_index = 0
     # Mapping LLVM memory to register
@@ -25,11 +23,12 @@ class ARMBackend:
         return self.parsed_code
 
     # This function will assign a register to a memory address
+    # It will also assign it a name based on the reg_index
     def alloc_reg(self):
-        r = self.reg_names[self.reg_index]
+        r = f't{self.reg_index}'
         self.reg_index += 1
         return r
-    
+
     # This function will return the name of the instruction
     def instruction_type(self, op):
         if isinstance(op, AddOp):
@@ -38,22 +37,49 @@ class ARMBackend:
             return 'sub'
         if isinstance(op, MulOp):
             return 'mul'
-    
+
+    # This function emits unwanted register allocations
+    def skip_register(self, const_op):
+        result = const_op.results[0]
+        
+        # Check all uses of this specific constant
+        for use in result.uses:
+            user = use.operation
+
+            # If it's used in any math or the final return, we must keep it
+            if isinstance(user, (AddOp, SubOp, MulOp, ReturnOp)):
+                return True
+
+            # If it's used in a Store, it represents a variable (like a=1)
+            # We keep it unless it's specifically the very first store, which is used for setup
+            if isinstance(user, StoreOp):
+                # Only skip the '0' store if it's the first thing we see
+                if const_op.value.value.data == 0 and self.reg_index == 0:
+                    return False
+                return True
+
+        # If it's only used for alloca size, it's safe to skip
+        return False
+
     # This function walks the MLIR LLVM code and parses it to ARM assembly
     def walk(self):
         for op in self.module.walk():
             if isinstance(op, ConstantOp):
+                # Check if operation is the first store or alloca
+                if not self.skip_register(op):
+                    continue
+
                 reg = self.alloc_reg()
                 # Map each constant to a register
                 self.value_reg_map[op.results[0]] = reg
                 self.parsed_code.append(f'li {reg}, {op.value.value.data}')
                 continue # Just go to next instruction
-            
+
             # For store we just want to see which constant is stored at which memory space.
             if isinstance(op, StoreOp):
                 self.store_operands.append(op)
                 continue
-            
+
             # Contains new memory space address and their registers
             new_map = {}
             # After we load the saved constant again into a new memory space, we want to find
@@ -74,9 +100,24 @@ class ARMBackend:
                 self.value_reg_map[op.results[0]] = rout
                 self.parsed_code.append(f'{self.instruction_type(op)} {rout}, {r1}, {r2}')
                 continue
+                
+            if op.name == "llvm.br":
+                label = op.successors[0].name
+                self.parsed_code.append(f"b {label}")
+                continue
+
+            if op.name == "llvm.cond_br":
+                cond = self.value_reg_map[op.operands[0]]
+                t = op.successors[0].name
+                f = op.successors[1].name
+                self.parsed_code.append(f"cmp {cond}, #0")
+                self.parsed_code.append(f"bne {t}")
+                self.parsed_code.append(f"b {f}")
+                continue
 
     # Save code in the currect directory
     def save_code(self, path, file_name):
         f = open(f'{path}/{file_name}.arm', 'w')
         for line in self.parsed_code:
             f.write(f'{line}\n')
+
