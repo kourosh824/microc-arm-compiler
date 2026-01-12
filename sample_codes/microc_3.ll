@@ -13,8 +13,9 @@ entry:
   store i32 0, ptr %retval, align 4
   store i32 42, ptr %a, align 4
   store i32 17, ptr %b, align 4
+  store i32 8, ptr %c, align 4
   %0 = load i32, ptr %a, align 4
-  %1 = load i32, ptr %b, align 4
+  %1 = load i32, ptr %c, align 4
   %cmp = icmp eq i32 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
@@ -44,4 +45,4 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"Debian clang version 19.1.7 (3+b1)"}
+!5 = !{!"Ubuntu clang version 18.1.3 (1ubuntu1)"}

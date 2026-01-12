@@ -132,8 +132,11 @@ class ARMBackend:
                     return False
                 return True
 
-        # If it's only used for alloca size, it's safe to skip
-        return False
+            # If it's only used for alloca size, it's safe to skip
+            if isinstance(user, AllocaOp): 
+               return False
+            
+            return True
 
     # Get all blocks once and map them to labels
     def get_labels(self):
@@ -146,7 +149,7 @@ class ARMBackend:
 
     def compile(self, op):
         if isinstance(op, ConstantOp):
-            # Check if operation is the first store or alloca
+            # Check if operation is alloca or the first store
             if not self.skip_register(op):
                 return
 
@@ -181,24 +184,24 @@ class ARMBackend:
             self.value_reg_map[op.results[0]] = rout
             self.parsed_code.append(f'\t{self.instruction_type(op)} {rout}, {r1}, {r2}')
             return
-            
+
         if isinstance(op, BrOp):
             l = self.value_label_map[op.dest]
             self.parsed_code.append(f"\tb {l}")  
             return
 
+
+        if isinstance(op,ICmpOp):
+            r1 = self.value_reg_map[op.lhs]
+            r2 = self.value_reg_map[op.rhs]
+            self.parsed_code.append(f'\tcmp {r1}, {r2}')
+            return
+
         if isinstance(op, CondBrOp):
-            print(op.name)
-            print(op.cond)
-            print(op.true_dest)
-            print(op.false_dest)
-            print('\n')
-            # cond = self.value_reg_map[op.operands[0]]
-            # t = op.successors[0].name
-            # f = op.successors[1].name
-            # self.parsed_code.append(f"cmp {cond}, #0")
-            # self.parsed_code.append(f"bne {t}")
-            # self.parsed_code.append(f"b {f}")
+            true_label = self.value_label_map[op.true_dest]
+            false_label = self.value_label_map[op.false_dest]
+            self.parsed_code.append(f'\tbeq {true_label}')
+            self.parsed_code.append(f'\tb {false_label}')
             return
 
     # This function walks the MLIR LLVM code and parses it to ARM assembly
