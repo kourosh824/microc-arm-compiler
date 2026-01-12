@@ -29,5 +29,4 @@ with open(f"./sample_codes/{MICROC_CODE}", "r") as f:
 print("Successfully loaded MLIR into xDSL!")
 arm = ARMBackend(module)
 arm.walk()
-print(arm.parsed_code)
 arm.save_code('./sample_codes', 'arm_code')

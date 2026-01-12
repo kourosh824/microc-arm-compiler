@@ -1,3 +1,4 @@
+from xdsl.ir import Block
 from xdsl.dialects.builtin import (
     I1,
     ArrayAttr,
@@ -5,6 +6,7 @@ from xdsl.dialects.builtin import (
     i32
 )
 from xdsl.dialects.llvm import (
+    FuncOp,
     StoreOp,
     ConstantOp,
     AddOp,
@@ -66,8 +68,12 @@ class ARMBackend:
         self.module = module
         # Current register index, how many registers we have used till now
         self.reg_index = 0
+        # Current label index, how many labels we have in total
+        self.label_index = -1
         # Mapping LLVM memory to register
         self.value_reg_map = {}
+        # Mapping LLVM blocks to labels
+        self.value_label_map = {}
         # Storing all store operands
         # Basically we don't want to use the stack. In MLIR LLVM, each value is 
         # first saved as a constant, then a memory space is allocated for it,
@@ -88,6 +94,14 @@ class ARMBackend:
         r = f't{self.reg_index}'
         self.reg_index += 1
         return r
+    
+    # This function will assign a label to each block
+    def alloc_label(self):
+        l = f'label_{self.label_index}'
+        if self.label_index == -1:
+            l = 'main'
+        self.label_index += 1
+        return l
 
     # This function will return the name of the instruction
     def instruction_type(self, op):
@@ -121,66 +135,86 @@ class ARMBackend:
         # If it's only used for alloca size, it's safe to skip
         return False
 
+    # Get all blocks once and map them to labels
+    def get_labels(self):
+        for op in self.module.walk():
+            if isinstance(op, FuncOp):
+                for block in op.body.blocks:
+                    block_label = self.alloc_label()
+                    # Add block so we can map it later in branch instructions
+                    self.value_label_map[block] = block_label
+
+    def compile(self, op):
+        if isinstance(op, ConstantOp):
+            # Check if operation is the first store or alloca
+            if not self.skip_register(op):
+                return
+
+            reg = self.alloc_reg()
+            # Map each constant to a register
+            self.value_reg_map[op.results[0]] = reg
+            self.parsed_code.append(f'\tli {reg}, {op.value.value.data}')
+            return # Just go to next instruction
+
+        # For store we just want to see which constant is stored at which memory space.
+        if isinstance(op, StoreOp):
+            self.store_operands.append(op)
+            return
+
+        # Contains new memory space address and their registers
+        new_map = {}
+        # After we load the saved constant again into a new memory space, we want to find
+        # the original constant reg.
+        if isinstance(op, LoadOp):
+            for sop in self.store_operands:
+                if op.operands[0] == sop.operands[1]:
+                    for k, v in self.value_reg_map.items():
+                        if sop.operands[0] == k:
+                            new_map[op.results[0]] = v
+            self.value_reg_map.update(new_map)
+            return
+
+        if isinstance(op, AddOp) or isinstance(op, SubOp) or isinstance(op, MulOp):
+            r1 = self.value_reg_map[op.lhs]
+            r2 = self.value_reg_map[op.rhs]
+            rout = self.alloc_reg()
+            self.value_reg_map[op.results[0]] = rout
+            self.parsed_code.append(f'\t{self.instruction_type(op)} {rout}, {r1}, {r2}')
+            return
+            
+        if isinstance(op, BrOp):
+            l = self.value_label_map[op.dest]
+            self.parsed_code.append(f"\tb {l}")  
+            return
+
+        if isinstance(op, CondBrOp):
+            print(op.name)
+            print(op.cond)
+            print(op.true_dest)
+            print(op.false_dest)
+            print('\n')
+            # cond = self.value_reg_map[op.operands[0]]
+            # t = op.successors[0].name
+            # f = op.successors[1].name
+            # self.parsed_code.append(f"cmp {cond}, #0")
+            # self.parsed_code.append(f"bne {t}")
+            # self.parsed_code.append(f"b {f}")
+            return
+
     # This function walks the MLIR LLVM code and parses it to ARM assembly
     def walk(self):
-        for op in self.module.walk():
-            if isinstance(op, ConstantOp):
-                # Check if operation is the first store or alloca
-                if not self.skip_register(op):
-                    continue
+        # First get all labels
+        self.get_labels()
+        for op0 in self.module.walk():
+            if isinstance(op0, FuncOp):
+                for block in op0.body.blocks:
+                    block_label = self.value_label_map[block]
+                    # Add block so we can map it later in branch instructions
+                    self.parsed_code.append(f'{block_label}:')
+                    
+                    for op in block.ops:
+                        self.compile(op)
 
-                reg = self.alloc_reg()
-                # Map each constant to a register
-                self.value_reg_map[op.results[0]] = reg
-                self.parsed_code.append(f'li {reg}, {op.value.value.data}')
-                continue # Just go to next instruction
-
-            # For store we just want to see which constant is stored at which memory space.
-            if isinstance(op, StoreOp):
-                self.store_operands.append(op)
-                continue
-
-            # Contains new memory space address and their registers
-            new_map = {}
-            # After we load the saved constant again into a new memory space, we want to find
-            # the original constant reg.
-            if isinstance(op, LoadOp):
-                for sop in self.store_operands:
-                    if op.operands[0] == sop.operands[1]:
-                        for k, v in self.value_reg_map.items():
-                            if sop.operands[0] == k:
-                                new_map[op.results[0]] = v
-                self.value_reg_map.update(new_map)
-                continue
-
-            if isinstance(op, AddOp) or isinstance(op, SubOp) or isinstance(op, MulOp):
-                r1 = self.value_reg_map[op.lhs]
-                r2 = self.value_reg_map[op.rhs]
-                rout = self.alloc_reg()
-                self.value_reg_map[op.results[0]] = rout
-                self.parsed_code.append(f'{self.instruction_type(op)} {rout}, {r1}, {r2}')
-                continue
-                
-            if isinstance(op, BrOp):
-                print(op.name)
-                print(op.dest)
-                # label = op.successors[0].name
-                # self.parsed_code.append(f"b {label}")
-                continue
-
-            if isinstance(op, CondBrOp):
-                print(op.name)
-                print(op.cond)
-                print(op.true_dest)
-                print(op.false_dest)
-                print('\n')
-                # cond = self.value_reg_map[op.operands[0]]
-                # t = op.successors[0].name
-                # f = op.successors[1].name
-                # self.parsed_code.append(f"cmp {cond}, #0")
-                # self.parsed_code.append(f"bne {t}")
-                # self.parsed_code.append(f"b {f}")
-                continue
 
     # Save code in the currect directory
     def save_code(self, path, file_name):
