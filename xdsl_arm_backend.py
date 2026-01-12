@@ -1,10 +1,4 @@
-from xdsl.ir import Block
-from xdsl.dialects.builtin import (
-    I1,
-    ArrayAttr,
-    IntegerAttr,
-    i32
-)
+from xdsl_llvm_operations import BrOp, CondBrOp
 from xdsl.dialects.llvm import (
     FuncOp,
     StoreOp,
@@ -17,51 +11,6 @@ from xdsl.dialects.llvm import (
     ReturnOp,
     ICmpOp
 )
-from xdsl.irdl.operations import (
-    IRDLOperation,
-    AttrSizedOperandSegments,
-    irdl_op_definition,
-    successor_def,
-    var_operand_def,
-    operand_def
-)
-
-# llvm.br ^bb1
-# llvm.cond_br %c, ^bb1, ^bb2
-@irdl_op_definition
-class BrOp(IRDLOperation):
-    name = 'llvm.br'
-    # Branch ops jump to BLOCKS and these block references are called successors
-    # So dest contains a reference to a target basic block
-    dest = successor_def()
-    # A variable-length list of operands
-    # llvm.br ^bb1(%x, %y, %z), %x, %y, %z are block arguments
-    dest_args = var_operand_def()
-
-    def __init__(self, dest, args=[]):
-        super().__init__(successors=[dest], operands=[args])
-
-# llvm.cond_br has three operand segments, [cond][true_args][false_args]
-@irdl_op_definition
-class CondBrOp(IRDLOperation):
-    name = 'llvm.cond_br'
-
-    # Branch condition
-    cond = operand_def(I1)
-
-    # Branch targets
-    true_dest = successor_def()
-    false_dest = successor_def()
-
-    args = var_operand_def()
-
-    def __init__(self, cond, tdest, fdest, args=None):
-        if args is None:
-            args = []
-        super().__init__(
-            operands=[cond, *args],
-            successors=[tdest, fdest]
-        )
 
 class ARMBackend:
     def __init__(self, module):
@@ -70,6 +19,8 @@ class ARMBackend:
         self.reg_index = 0
         # Current label index, how many labels we have in total
         self.label_index = -1
+        # Maps each constant to its value
+        self.value_const_map = {}
         # Mapping LLVM memory to register
         self.value_reg_map = {}
         # Mapping LLVM blocks to labels
@@ -82,11 +33,11 @@ class ARMBackend:
         # an li instruction per each constant.
         self.store_operands = []
         # Final parsed code
-        self.parsed_code = []
+        self.compiled_code = []
 
     # What is returned when this object is printed
     def __str__(self):
-        return self.parsed_code
+        return self.compiled_code
 
     # This function will assign a register to a memory address
     # It will also assign it a name based on the reg_index
@@ -152,29 +103,36 @@ class ARMBackend:
             # Check if operation is alloca or the first store
             if not self.skip_register(op):
                 return
-
-            reg = self.alloc_reg()
-            # Map each constant to a register
-            self.value_reg_map[op.results[0]] = reg
-            self.parsed_code.append(f'\tli {reg}, {op.value.value.data}')
+            
+            # Map each constant to its value
+            self.value_const_map[op.results[0]] = op.value.value.data
             return # Just go to next instruction
+
+        if isinstance(op, AllocaOp):
+            # If we have memory allocation then we must allocate a register
+            reg = self.alloc_reg()
+            # Map each POINTER to its register
+            self.value_reg_map[op.results[0]] = reg
+            return
 
         # For store we just want to see which constant is stored at which memory space.
         if isinstance(op, StoreOp):
-            self.store_operands.append(op)
+            # if the first operand is not a constant and is coming from a mathematical
+            # expression then return since the math handler writes the compiled code itself
+            if op.operands[0] not in self.value_const_map.keys():
+                return
+            # the constant is saved at op.operands[0]
+            c = self.value_const_map[op.operands[0]]
+            # the pointer is saved at op.operansd[1]
+            r = self.value_reg_map[op.operands[1]]
+            self.compiled_code.append(f'\tli {r}, {c}')
+            # self.store_operands.append(op)
             return
 
-        # Contains new memory space address and their registers
-        new_map = {}
-        # After we load the saved constant again into a new memory space, we want to find
-        # the original constant reg.
+        # We will just link the new pointer to allocated register from AllocOp
         if isinstance(op, LoadOp):
-            for sop in self.store_operands:
-                if op.operands[0] == sop.operands[1]:
-                    for k, v in self.value_reg_map.items():
-                        if sop.operands[0] == k:
-                            new_map[op.results[0]] = v
-            self.value_reg_map.update(new_map)
+            # Map the result of the load operation to the same allocated register
+            self.value_reg_map[op.results[0]]= self.value_reg_map[op.operands[0]]
             return
 
         if isinstance(op, AddOp) or isinstance(op, SubOp) or isinstance(op, MulOp):
@@ -182,26 +140,25 @@ class ARMBackend:
             r2 = self.value_reg_map[op.rhs]
             rout = self.alloc_reg()
             self.value_reg_map[op.results[0]] = rout
-            self.parsed_code.append(f'\t{self.instruction_type(op)} {rout}, {r1}, {r2}')
+            self.compiled_code.append(f'\t{self.instruction_type(op)} {rout}, {r1}, {r2}')
             return
 
         if isinstance(op, BrOp):
             l = self.value_label_map[op.dest]
-            self.parsed_code.append(f"\tb {l}")  
+            self.compiled_code.append(f"\tb {l}")  
             return
-
 
         if isinstance(op,ICmpOp):
             r1 = self.value_reg_map[op.lhs]
             r2 = self.value_reg_map[op.rhs]
-            self.parsed_code.append(f'\tcmp {r1}, {r2}')
+            self.compiled_code.append(f'\tcmp {r1}, {r2}')
             return
 
         if isinstance(op, CondBrOp):
             true_label = self.value_label_map[op.true_dest]
             false_label = self.value_label_map[op.false_dest]
-            self.parsed_code.append(f'\tbeq {true_label}')
-            self.parsed_code.append(f'\tb {false_label}')
+            self.compiled_code.append(f'\tbeq {true_label}')
+            self.compiled_code.append(f'\tb {false_label}')
             return
 
     # This function walks the MLIR LLVM code and parses it to ARM assembly
@@ -213,7 +170,7 @@ class ARMBackend:
                 for block in op0.body.blocks:
                     block_label = self.value_label_map[block]
                     # Add block so we can map it later in branch instructions
-                    self.parsed_code.append(f'{block_label}:')
+                    self.compiled_code.append(f'{block_label}:')
                     
                     for op in block.ops:
                         self.compile(op)
@@ -222,6 +179,6 @@ class ARMBackend:
     # Save code in the currect directory
     def save_code(self, path, file_name):
         f = open(f'{path}/{file_name}.arm', 'w')
-        for line in self.parsed_code:
+        for line in self.compiled_code:
             f.write(f'{line}\n')
 

@@ -5,7 +5,8 @@ from xdsl.dialects.llvm import LLVM
 from xdsl.dialects.dlti import DLTI
 from xdsl.printer import Printer
 
-from xdsl_arm_backend import ARMBackend, BrOp, CondBrOp
+from xdsl_arm_backend import ARMBackend
+from xdsl_llvm_operations import BrOp, CondBrOp
 
 # If you add new microC codes please replace this name
 MICROC_CODE = "microc_3.mlir"

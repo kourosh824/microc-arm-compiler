@@ -1,3 +1,4 @@
+# No longer useful, instead of lowering we developed a backend
 from xdsl.context import Context
 from xdsl.passes import ModulePass
 from xdsl.dialects.builtin import IntegerAttr
