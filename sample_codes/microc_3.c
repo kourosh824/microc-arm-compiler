@@ -8,5 +8,8 @@ int main() {
     else
         c = 62;
     a = a + b;
+
+    c = a + b;
+    c = a * b;
     return 0;
 }

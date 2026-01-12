@@ -13,4 +13,6 @@ label_1:
 	li t3, 62
 	b label_2
 label_2:
-	add t4, t1, t2
+	add t1, t1, t2
+	add t3, t1, t2
+	mul t3, t1, t2

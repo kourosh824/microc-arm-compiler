@@ -132,15 +132,17 @@ class ARMBackend:
         # We will just link the new pointer to allocated register from AllocOp
         if isinstance(op, LoadOp):
             # Map the result of the load operation to the same allocated register
-            self.value_reg_map[op.results[0]]= self.value_reg_map[op.operands[0]]
+            self.value_reg_map[op.results[0]] = self.value_reg_map[op.operands[0]]
             return
 
         if isinstance(op, AddOp) or isinstance(op, SubOp) or isinstance(op, MulOp):
             r1 = self.value_reg_map[op.lhs]
             r2 = self.value_reg_map[op.rhs]
-            rout = self.alloc_reg()
-            self.value_reg_map[op.results[0]] = rout
+            # after a math operation the next instruction is store
+            # we read the store to find out where the result is being saved
+            rout = self.value_reg_map[op.next_op.operands[1]]
             self.compiled_code.append(f'\t{self.instruction_type(op)} {rout}, {r1}, {r2}')
+
             return
 
         if isinstance(op, BrOp):
