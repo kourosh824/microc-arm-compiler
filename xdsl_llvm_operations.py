@@ -3,7 +3,6 @@ from xdsl.dialects.builtin import (
 )
 from xdsl.irdl.operations import (
     IRDLOperation,
-    AttrSizedOperandSegments,
     irdl_op_definition,
     successor_def,
     var_operand_def,

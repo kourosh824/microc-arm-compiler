@@ -10,6 +10,7 @@ entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
   %c = alloca i32, align 4
+  %d = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   store i32 17, ptr %a, align 4
   store i32 42, ptr %b, align 4
