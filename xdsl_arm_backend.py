@@ -99,7 +99,7 @@ class ARMBackend:
             else:
                 r = self.alloc_reg()
                 self.value_reg_map[k] = r
-            self.compiled_code.append(f'\tli {r}, {c}')
+            self.compiled_code.append(f'\tmov {r}, {c}')
             # self.store_operands.append(op)
             return
 
