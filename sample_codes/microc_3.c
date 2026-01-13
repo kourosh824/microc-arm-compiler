@@ -1,6 +1,7 @@
 int main() {
-    int a, b, c;
-    a = 42;
+    int a, b, c, d;
+    a = 0;
+    d = 3;
     b = 17;
     c = 8;
     if(a == c)

@@ -4,7 +4,6 @@ int main() {
     b = 5;
     c = a * b;
 	d = c + b;
-	e = d - a;
-	f = e * d;
+	f = a * d;
 	return b;
 }

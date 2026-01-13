@@ -24,16 +24,12 @@ entry:
   %3 = load i32, ptr %b, align 4
   %add = add nsw i32 %2, %3
   store i32 %add, ptr %d, align 4
-  %4 = load i32, ptr %d, align 4
-  %5 = load i32, ptr %a, align 4
-  %sub = sub nsw i32 %4, %5
-  store i32 %sub, ptr %e, align 4
-  %6 = load i32, ptr %e, align 4
-  %7 = load i32, ptr %d, align 4
-  %mul1 = mul nsw i32 %6, %7
+  %4 = load i32, ptr %a, align 4
+  %5 = load i32, ptr %d, align 4
+  %mul1 = mul nsw i32 %4, %5
   store i32 %mul1, ptr %f, align 4
-  %8 = load i32, ptr %b, align 4
-  ret i32 %8
+  %6 = load i32, ptr %b, align 4
+  ret i32 %6
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
@@ -46,4 +42,4 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"Debian clang version 19.1.7 (3+b1)"}
+!5 = !{!"Ubuntu clang version 18.1.3 (1ubuntu1)"}

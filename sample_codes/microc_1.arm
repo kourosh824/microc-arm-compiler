@@ -1,4 +1,5 @@
 main:
-	li t1, 17
-	li t2, 42
-	add t3, t1, t2
+	li t0, 17
+	li t1, 42
+	add t2, t0, t1
+	li t3, 5

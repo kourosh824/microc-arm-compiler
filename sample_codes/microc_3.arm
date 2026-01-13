@@ -1,9 +1,9 @@
 main:
 	li t0, 0
-	li t1, 42
+	li t1, 3
 	li t2, 17
 	li t3, 8
-	cmp t1, t3
+	cmp t0, t3
 	beq label_0
 	b label_1
 label_0:
@@ -13,6 +13,6 @@ label_1:
 	li t3, 62
 	b label_2
 label_2:
-	add t1, t1, t2
-	add t3, t1, t2
-	mul t3, t1, t2
+	add t0, t0, t2
+	add t3, t0, t2
+	mul t3, t0, t2

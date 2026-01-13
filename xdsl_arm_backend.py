@@ -15,6 +15,8 @@ from xdsl.dialects.llvm import (
 class ARMBackend:
     def __init__(self, module):
         self.module = module
+        # Counter to skip the first store operation
+        self.store_instance = 0
         # Current register index, how many registers we have used till now
         self.reg_index = 0
         # Current label index, how many labels we have in total
@@ -25,13 +27,6 @@ class ARMBackend:
         self.value_reg_map = {}
         # Mapping LLVM blocks to labels
         self.value_label_map = {}
-        # Storing all store operands
-        # Basically we don't want to use the stack. In MLIR LLVM, each value is 
-        # first saved as a constant, then a memory space is allocated for it,
-        # then this constant is stored at that memory space and THEN we load this address.
-        # We don't want to do all of this that's why we just define
-        # an li instruction per each constant.
-        self.store_operands = []
         # Final parsed code
         self.compiled_code = []
 
@@ -63,32 +58,6 @@ class ARMBackend:
         if isinstance(op, MulOp):
             return 'mul'
 
-    # This function emits unwanted register allocations
-    def skip_register(self, const_op):
-        result = const_op.results[0]
-        
-        # Check all uses of this specific constant
-        for use in result.uses:
-            user = use.operation
-
-            # If it's used in any math or the final return, we must keep it
-            if isinstance(user, (AddOp, SubOp, MulOp, ReturnOp)):
-                return True
-
-            # If it's used in a Store, it represents a variable (like a=1)
-            # We keep it unless it's specifically the very first store, which is used for setup
-            if isinstance(user, StoreOp):
-                # Only skip the '0' store if it's the first thing we see
-                if const_op.value.value.data == 0 and self.reg_index == 0:
-                    return False
-                return True
-
-            # If it's only used for alloca size, it's safe to skip
-            if isinstance(user, AllocaOp): 
-               return False
-            
-            return True
-
     # Get all blocks once and map them to labels
     def get_labels(self):
         for op in self.module.walk():
@@ -99,20 +68,12 @@ class ARMBackend:
                     self.value_label_map[block] = block_label
 
     def compile(self, op):
-        if isinstance(op, ConstantOp):
-            # Check if operation is alloca or the first store
-            if not self.skip_register(op):
-                return
-            
+        if isinstance(op, ConstantOp):    
             # Map each constant to its value
             self.value_const_map[op.results[0]] = op.value.value.data
             return # Just go to next instruction
 
         if isinstance(op, AllocaOp):
-            # If we have memory allocation then we must allocate a register
-            reg = self.alloc_reg()
-            # Map each POINTER to its register
-            self.value_reg_map[op.results[0]] = reg
             return
 
         # For store we just want to see which constant is stored at which memory space.
@@ -121,10 +82,23 @@ class ARMBackend:
             # expression then return since the math handler writes the compiled code itself
             if op.operands[0] not in self.value_const_map.keys():
                 return
+            
+            # Skip the first store operation since it will never be used
+            if self.store_instance == 0:
+                self.store_instance += 1
+                return
+            
             # the constant is saved at op.operands[0]
             c = self.value_const_map[op.operands[0]]
             # the pointer is saved at op.operansd[1]
-            r = self.value_reg_map[op.operands[1]]
+            # r = self.value_reg_map[op.operands[1]]
+            k = op.operands[1]
+            r = 0
+            if k in self.value_reg_map.keys():
+                r = self.value_reg_map[k]
+            else:
+                r = self.alloc_reg()
+                self.value_reg_map[k] = r
             self.compiled_code.append(f'\tli {r}, {c}')
             # self.store_operands.append(op)
             return
@@ -140,7 +114,14 @@ class ARMBackend:
             r2 = self.value_reg_map[op.rhs]
             # after a math operation the next instruction is store
             # we read the store to find out where the result is being saved
-            rout = self.value_reg_map[op.next_op.operands[1]]
+            k = op.next_op.operands[1]
+            rout = 0
+            if k in self.value_reg_map.keys():
+                rout = self.value_reg_map[k]
+            else:
+                rout = self.alloc_reg()
+                self.value_reg_map[k] = rout
+           
             self.compiled_code.append(f'\t{self.instruction_type(op)} {rout}, {r1}, {r2}')
 
             return
