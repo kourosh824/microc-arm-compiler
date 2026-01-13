@@ -1,5 +1,10 @@
-main:
-	li t0, 17
-	li t1, 42
-	add t2, t0, t1
-	li t3, 5
+.syntax unified
+.thumb
+.global asm_compute
+.type asm_compute, %function
+asm_compute:
+	mov r0, 17
+	mov r1, 42
+	add r2, r0, r1
+	mov r3, 5
+	bx lr

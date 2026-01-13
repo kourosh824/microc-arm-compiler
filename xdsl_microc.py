@@ -29,7 +29,6 @@ with open(f"./sample_codes/{MICROC_FILE_NAME}.mlir", "r") as f:
     parser = Parser(ctx, f.read())
     module = parser.parse_module()
 
-print("Successfully loaded MLIR into xDSL!")
 arm = ARMBackend(module)
 arm.walk()
 arm.save_code('./sample_codes', f'{MICROC_FILE_NAME}')

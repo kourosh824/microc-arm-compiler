@@ -8,8 +8,8 @@ from xdsl.dialects.llvm import (
     SubOp,
     MulOp,
     AllocaOp,
-    ReturnOp,
-    ICmpOp
+    ICmpOp,
+    ReturnOp
 )
 
 class ARMBackend:
@@ -28,7 +28,12 @@ class ARMBackend:
         # Mapping LLVM blocks to labels
         self.value_label_map = {}
         # Final parsed code
-        self.compiled_code = []
+        self.compiled_code = [
+            '.syntax unified',
+            '.thumb',
+            '.global asm_compute',
+            '.type asm_compute, %function'
+        ]
 
     # What is returned when this object is printed
     def __str__(self):
@@ -37,7 +42,7 @@ class ARMBackend:
     # This function will assign a register to a memory address
     # It will also assign it a name based on the reg_index
     def alloc_reg(self):
-        r = f't{self.reg_index}'
+        r = f'r{self.reg_index}'
         self.reg_index += 1
         return r
     
@@ -45,7 +50,7 @@ class ARMBackend:
     def alloc_label(self):
         l = f'label_{self.label_index}'
         if self.label_index == -1:
-            l = 'main'
+            l = 'asm_compute'
         self.label_index += 1
         return l
 
@@ -99,7 +104,7 @@ class ARMBackend:
             else:
                 r = self.alloc_reg()
                 self.value_reg_map[k] = r
-            self.compiled_code.append(f'\tmov {r}, {c}')
+            self.compiled_code.append(f'\tmovs {r}, #{c}')
             # self.store_operands.append(op)
             return
 
@@ -143,6 +148,10 @@ class ARMBackend:
             self.compiled_code.append(f'\tbeq {true_label}')
             self.compiled_code.append(f'\tb {false_label}')
             return
+        
+        if isinstance(op, ReturnOp):
+            self.compiled_code.append(f'\tmov r0, {self.value_reg_map[op.operands[0]]}')
+            return
 
     # This function walks the MLIR LLVM code and parses it to ARM assembly
     def walk(self):
@@ -157,7 +166,8 @@ class ARMBackend:
                     
                     for op in block.ops:
                         self.compile(op)
-
+        # the following line is added for returning
+        self.compiled_code.append('\tbx lr')
 
     # Save code in the currect directory
     def save_code(self, path, file_name):

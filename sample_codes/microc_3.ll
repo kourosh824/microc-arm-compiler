@@ -42,7 +42,8 @@ if.end:                                           ; preds = %if.else, %if.then
   %7 = load i32, ptr %b, align 4
   %mul = mul nsw i32 %6, %7
   store i32 %mul, ptr %c, align 4
-  ret i32 0
+  %8 = load i32, ptr %c, align 4
+  ret i32 %8
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
@@ -55,4 +56,4 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"Ubuntu clang version 18.1.3 (1ubuntu1)"}
+!5 = !{!"Debian clang version 19.1.7 (3+b1)"}
