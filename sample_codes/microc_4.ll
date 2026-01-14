@@ -13,10 +13,13 @@ entry:
   store i32 0, ptr %retval, align 4
   store i32 0, ptr %a, align 4
   store i32 5, ptr %b, align 4
-  store i32 3, ptr %c, align 4
   %0 = load i32, ptr %a, align 4
-  %1 = load i32, ptr %c, align 4
-  %cmp = icmp eq i32 %0, %1
+  %1 = load i32, ptr %b, align 4
+  %mul = mul nsw i32 %0, %1
+  store i32 %mul, ptr %c, align 4
+  %2 = load i32, ptr %a, align 4
+  %3 = load i32, ptr %c, align 4
+  %cmp = icmp eq i32 %2, %3
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
@@ -28,8 +31,8 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %2 = load i32, ptr %c, align 4
-  ret i32 %2
+  %4 = load i32, ptr %c, align 4
+  ret i32 %4
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

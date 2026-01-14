@@ -2,7 +2,7 @@ int main() {
     int a, b, c;
     a = 0;
     b = 5;
-    c = 3;
+    c = a * b;
     if (a == c)
         c = 15;
     else 

@@ -5,7 +5,7 @@
 asm_compute:
 	movs r0, #0
 	movs r1, #5
-	movs r2, #3
+	mul r2, r0, r1
 	cmp r0, r2
 	beq label_0
 	b label_1
