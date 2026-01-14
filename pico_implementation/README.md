@@ -1,29 +1,48 @@
 # Raspberry Pi Pico 2 Development Setup
-### Install required build tools and ARM cross-compiler:
 
+This guide describes the required setup for building and flashing firmware to the Raspberry Pi Pico 2.
+
+## 1. Install Required Build Tools and ARM Cross-Compiler
+
+Install the necessary development packages:
+
+```bash
 sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+```
 
-### Clone the Raspberry Pi Pico SDK locally:
+## 2. Clone the Raspberry Pi Pico SDK
 
+```bash
 git clone https://github.com/raspberrypi/pico-sdk.git
+```
 
-### Set the SDK path in the environment:
+## 3. Set the SDK Path in the Environment
 
+```bash
 export PICO_SDK_PATH=~/bonus_micro/pico-sdk
+```
 
-### Create a project directory and copy the SDK import file:
+## 4. Create Project Directory and Import SDK Configuration
 
-cp pico-sdk/external/pico_sdk_import.cmake <your_project_folder>/ 
+```bash
+cp pico-sdk/external/pico_sdk_import.cmake <your_project_folder>/
+```
 
-### The project directory contained the C sources, ARM assembly code, CMake configuration, and a build script to automate the firmware compilation process.
+The project directory contains:
+- C source files  
+- ARM assembly code  
+- CMake configuration files  
+- A build script to automate firmware compilation  
 
-## Build and Flash Procedure
+## 5. Build the Firmware
 
-### Generate the firmware file by running the build script (after granting execution permission):
-
+```bash
 chmod +x build.sh
 ./build.sh
+```
 
-### Connect the Raspberry Pi Pico 2 to the PC while holding the BOOTSEL button. The board will appear as a removable storage device.
+## 6. Flash the Raspberry Pi Pico 2
 
-### Drag and drop the generated .uf2 file into the Pico storage folder. The device will automatically disconnect and execute the uploaded firmware.
+1. Connect the Raspberry Pi Pico 2 to your PC while holding the **BOOTSEL** button.  
+2. The board will appear as a removable storage device.  
+3. Copy the generated firmware file to the device to complete flashing.
