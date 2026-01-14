@@ -1,0 +1,20 @@
+.syntax unified
+.thumb
+.global asm_compute
+.type asm_compute, %function
+asm_compute:
+	movs r0, #0
+	movs r1, #5
+	movs r2, #3
+	cmp r0, r2
+	beq label_0
+	b label_1
+label_0:
+	movs r2, #15
+	b label_2
+label_1:
+	movs r2, #62
+	b label_2
+label_2:
+	mov r0, r2
+	bx lr
