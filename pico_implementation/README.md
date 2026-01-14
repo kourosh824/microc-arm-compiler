@@ -47,4 +47,5 @@ chmod +x build.sh
 2. The board will appear as a removable storage device.  
 3. Copy the generated firmware file to the device to complete flashing.
 
-(The test_codes.uf2 firmware is ready. Drag and drop it onto the Pico in BOOTSEL mode to flash and run.)
+(The test_codes/ directory contains precompiled .uf2 firmware files. 
+Each .uf2 file can be flashed to the Raspberry Pi Pico by dragging and dropping it onto the board while in BOOTSEL mode.)
