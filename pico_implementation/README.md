@@ -46,3 +46,5 @@ chmod +x build.sh
 1. Connect the Raspberry Pi Pico 2 to your PC while holding the **BOOTSEL** button.  
 2. The board will appear as a removable storage device.  
 3. Copy the generated firmware file to the device to complete flashing.
+
+(The test_codes.uf2 firmware is ready. Drag and drop it onto the Pico in BOOTSEL mode to flash and run.)
