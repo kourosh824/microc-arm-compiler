@@ -55,13 +55,23 @@ class ARMBackend:
         return l
 
     # This function will return the name of the instruction
-    def instruction_type(self, op):
+    def instruction_type(self, op, condbr=False):
         if isinstance(op, AddOp):
             return 'add'
         if isinstance(op, SubOp):
             return 'sub'
         if isinstance(op, MulOp):
             return 'mul'
+        if isinstance(op, StoreOp):
+            return 'movs'
+        if isinstance(op, BrOp):
+            return 'b'
+        if isinstance(op, ICmpOp):
+            return 'cmp'
+        if isinstance(op, CondBrOp) and condbr==True:
+            return 'beq'
+        if isinstance(op, CondBrOp) and condbr==False:
+            return 'b'
 
     # Get all blocks once and map them to labels
     def get_labels(self):
@@ -104,7 +114,7 @@ class ARMBackend:
             else:
                 r = self.alloc_reg()
                 self.value_reg_map[k] = r
-            self.compiled_code.append(f'\tmovs {r}, #{c}')
+            self.compiled_code.append(f'\t{self.instruction_type(op)} {r}, #{c}')
             # self.store_operands.append(op)
             return
 
@@ -133,20 +143,20 @@ class ARMBackend:
 
         if isinstance(op, BrOp):
             l = self.value_label_map[op.dest]
-            self.compiled_code.append(f"\tb {l}")  
+            self.compiled_code.append(f"\t{self.instruction_type(op)} {l}")  
             return
 
         if isinstance(op,ICmpOp):
             r1 = self.value_reg_map[op.lhs]
             r2 = self.value_reg_map[op.rhs]
-            self.compiled_code.append(f'\tcmp {r1}, {r2}')
+            self.compiled_code.append(f'\t{self.instruction_type(op)} {r1}, {r2}')
             return
 
         if isinstance(op, CondBrOp):
             true_label = self.value_label_map[op.true_dest]
             false_label = self.value_label_map[op.false_dest]
-            self.compiled_code.append(f'\tbeq {true_label}')
-            self.compiled_code.append(f'\tb {false_label}')
+            self.compiled_code.append(f'\t{self.instruction_type(op, True)} {true_label}')
+            self.compiled_code.append(f'\t{self.instruction_type(op, False)} {false_label}')
             return
         
         if isinstance(op, ReturnOp):

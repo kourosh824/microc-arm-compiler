@@ -13,7 +13,7 @@ entry:
   %d = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   store i32 0, ptr %a, align 4
-  store i32 3, ptr %d, align 4
+  store i32 1, ptr %d, align 4
   store i32 17, ptr %b, align 4
   store i32 8, ptr %c, align 4
   %0 = load i32, ptr %a, align 4
@@ -33,11 +33,11 @@ if.end:                                           ; preds = %if.else, %if.then
   %2 = load i32, ptr %a, align 4
   %3 = load i32, ptr %b, align 4
   %add = add nsw i32 %2, %3
-  store i32 %add, ptr %a, align 4
-  %4 = load i32, ptr %a, align 4
-  %5 = load i32, ptr %b, align 4
-  %add1 = add nsw i32 %4, %5
-  store i32 %add1, ptr %c, align 4
+  store i32 %add, ptr %d, align 4
+  %4 = load i32, ptr %b, align 4
+  %5 = load i32, ptr %c, align 4
+  %sub = sub nsw i32 %4, %5
+  store i32 %sub, ptr %a, align 4
   %6 = load i32, ptr %a, align 4
   %7 = load i32, ptr %b, align 4
   %mul = mul nsw i32 %6, %7
@@ -56,4 +56,4 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"Debian clang version 19.1.7 (3+b1)"}
+!5 = !{!"Ubuntu clang version 18.1.3 (1ubuntu1)"}
