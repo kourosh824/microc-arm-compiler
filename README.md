@@ -1,43 +1,33 @@
 # microc-arm-compiler
 A basic compiler that takes C MLIR and compiles it to ARM assembly using xDSL.
 
-## Πριν γράψουμε κώδικα
-1. Προτείνω πολύ να κάνετε όλη την εργασία σε κάποιο Linux λειτουργικό.
-2. Κατεβάζετε αρχικά το clang. Αν δεν ξέρετε πώς γίνεται με τον εξής τρόπο:
+## Prerequisites
+1. We highly recommend working this project on Linux.
+2. First you need to instal clang:
 ```bash
 sudo apt install clang
 ```
-3. Κατεβάζετε μετά το MLIR μέσω της εντολής:
+3. You now have to install MLIR tools:
 ```bash
 sudo apt-get install libmlir-20-dev mlir-20-tools
 ```
-Αν δεν δουλεύει το παραπάνω πείτε μου γιατί μπορεί να χρειάζεται να κάνετε και κάτι άλλο.
-4. Γενικά απαιτείται να έχετε Python στη συσκευή σας. Εγώ χρησιμοποιώ το Python 3.13.5 αλλά λογικά όλες οι εκδοχές του Python 3 μας κάνουν.
-5. Θα πρέπει να κατεβάσετε τη Python βιβλιοθήκη της xDSL. Αυτό γίνεται μέσω:
+4. You must have Python installed on your system. While doing this project we used Python 3.13.5.
+5. You now have to download the xDSL library for Python using pip:
 ```bash
 pip install xdsl
 ```
 
-## Μια γενική ίδεα του τι θα κάνουμε
-Όπως μας έχουνε πει, θέλουμε να φτιάξουμε ένα compiler που μετατρέπει κώδικα C σε ARM assembly. Θα χρησιμοποιήσουμε το MLIR και συγκεκριμένα το xDSL για να πετύχουμε αυτό. Θα εξήγησω λίγο τι έχω κατάλαβει που μπορεί να μην ισχύει οπότε προτείνω και εσείς να ψάξετε λίγο και να μου πείτε αν βρείτε κάτι άλλο.
+## What is this compiler?
+This compiler is made of a backend for compiling C code to ARM. The backend only supports some C operations and that is why we prefer to call it microC. We use clang to generate the LLVM file and then use MLIR tools to translate this LLVM file to MLIR's LLVM dialect. We then use xDSL to read this intermediate representation and compile the microC code to ARM.
 
-Οι σύγχρονοι μεταγλωττιστές δεν μετατρέπουν κατευθείαν απο C σε assembly, αντίθετα περνάνε απο αρκετά ενδιάμεσα στάδια. Ένα απο τα βασικότερα στάδια που περνάμε σε αυτή την διαδικασία είναι το AST (abstract syntax tree) το οποίο περιγράφει την δομή του προγράμματος. Στην συνέχεια με την βοήθεια του AST (ίσως υπάρχουν και αλλα εδνιάμεσα στάδια) περνάμε σε ένα ακόμα χαμηλότερο επίπεδο αναπαράστασης που είναι η αναπαράσταση LLVM IR. Aυτή μπορούμε να την σκεφτόμαστε σαν μια κοινή γλώσσα που μιλάνε μεταξύ τους οι compilers πάνω στην οποία εφαρμόζονται τα περισσότερα optimizations. Έτσι πχ δεν χρειάζεται να έχεις optimizers κλπ για πολλές γλώσσες, όλοι οι compilers περνάνε κάποια στιγμή  το επίπεδο κώδικα LLVM και όλοι τον καταλαβαίνουν. Για να καταλάβετε πώς είναι ακριβώς μπορείτε λίγο να δείτε τα αρχεία που τελειώνουν με ```.ll``` στον φάκελο ```sample_codes```.
 
-Τώρα τι είναι το MLIR?
-Το MLIR είναι ενα framework εντός του οποίου υπάρχουν διάλεκτοι (dialects) διαφορετικού επιπέδου. Μέσω του MLIR, ένα πρόγραμμα μπορεί να χαμηλώνεται σταδιακά από πιο υψηλού επιπέδου, γενικές και αρχιτεκτονικά ανεξάρτητες αναπαραστάσεις, σε όλο και πιο χαμηλού επιπέδου, αρχιτεκτονικά εξαρτημένες μορφές. ΓΕνικά εντός αυτου του framewordk γίνεται αντιλυπτό οτι θα υπάρχουν διάλεκτοι πιο γενικοί που χρησιμοποιούνται για ενδιάμεσα στάδια και αρχιτεκντονικά ανεξάρτητες αναπαραστάσεςι πχ arith αλλά υπάρχουν και άλλες διάλεκτοι πχ RISC-V dialect που ειναι πολύ πιο κοντά στο επίπεδο assembly μιας συγκεκριμένης αρχιτεκτονικής περιγράφοντας ρητά εντολές τις και προφανως τέτοιες διάλεκτοι δεν ειναι το versatile.
-
-Μπαίνει μετά το xDSL στο παιχνίδι που μας αφήνει να δουλέψουμε με αυτό στο MLIR μέσω της Python. Ουσιαστικά τα βήματα που θα ακολουθήσουμε στην άσκηση είναι:
-1. Γράφουμε κώδικα στο microC (μια πολύ απλοποιημένη C με μαθηματικές πράξεις, if/else και while).
-2. Χρησιμοποιούμε το clang για να παράγουμε το LLVM κώδικα. Αυτό γίνεται μέσω:
-```bash
-clang -S -emit-llvm -O0 -fno-discard-value-names microc_code.c -o microc_code.ll
-```
-3. Χρησιμοποιούμε το ```mlir-translate-20``` για να μεταφράσουμε αυτό το LLVM IR κώδικα σε MLIR LLVM dialect(δηλαδή σε αυτο το βήμα δεν αλλάζουμε επίπεδο αφαίρεσης αλλα μονο αναπαράσταση) για να μπορούμε να το επεξεργαστούμε μέσω xDSL (Η xDSL είναι ένα Python framework που υλοποιεί τις έννοιες του MLIR):
-```bash
-mlir-translate-20 --import-llvm --mlir-print-op-generic microc_code.ll -o microc_code.mlir
-```
-4. Μέχρι στιγμής έχω γράψει εγώ έναν κώδικα ```xdsl_microc.py``` που ανοίγει αυτό το MLIR αρχείο προς επεξεργασία. Έχω φτιάξει και έναν βοηθητικό κώδικα ```xdsl_riscv_lowering.py``` που όπως είπα παίρνει αυτό το γενικό MLIR και το μετατρέπει σε RISCV MLIR. Να σημειωθεί ότι δεν έχω υλοποιήσει πολλά ακόμη, το μόνο που έχω καταφέρει είναι να μετατρέψω μια απλή εντολή AND σε RISCV AND.
-5. Αφού κατάφερουμε να μετατρέψουμε αυτό το MLIR σε RISCV διάλεκτο, πρέπει να φτιάξουμε ένα απλό parser που μετατρέπει τον κώδικα RISCV σε ARM και τελειώσαμε :)
-
-## Κάποια πράγματα για git και github
-Γενικά όποτε θέλετε να δουλέψετε πάνω στο πρότζεκτ κάντε ένα pull πρώτα. Έτσι θα βεβαιωθείτε ότι θα έχετε λάβει τις τελευταίες αλλαγές που έχουνε κάνει οι άλλοι. Καθώς δουλεύετε, κάθε που και που κάντε ένα push για να ανεβάσετε τις αλλαγές στο github. Καλό είναι να βάλετε σχόλια και όταν κάνετε push να γράψετε καλό μήνυμα για να είναι λίγο πιο οργανωμένα τα πράγματα.
+## What does each file do?
+| File Name      | Description |
+| ----------- | ----------- |
+| ```xdsl_llvm_operations.py```      | xDSL's LLVM is not complete, some operations such as ```BrOp``` or ```CondOp``` are not yet defined. As a result, we had to extend the LLVM class and write these classes ourselves.       |
+| ```xdsl_arm_backend.py```   | This file has our backend, ```ARMBackend```. It takes a module (MLIR's LLVM file) as input and generates the ARM code based on that.        |
+| ```xdsl_microc.py```   | This file opens the MLIR file and uses the backend in order to compile it. After the compilation is done the ARM file will be generated in the ```sample_codes``` folder.       |
+| ```sample_codes```   | Here you can see all the sample microC files, their LLVM, MLIR and ARM codes. If you want to add a new microC file simply add it here.        |
+| ```microc_arm_compile.sh```   | Simply run this executable with the name of the microC file name in the sample_codes folder you want to compile.        |
+| ```xdsl_riscv_lowering.py```   | Garbage, in the beginning we wanted to lower the LLVM dialect to RISCV but we changed our approach.        |
+| ```pico_implementation```   | How to test the final compiled ARM code in Pico 2.        |
