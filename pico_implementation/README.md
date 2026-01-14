@@ -1,4 +1,7 @@
 # Raspberry Pi Pico 2 Development Setup
+This project implements a complete ARM assembly and C workflow on the Raspberry Pi Pico 2 to demonstrate the correct functionality of our custom compiler. 
+The assembly routine was developed by us and generated from C using the compiler included in this repository. 
+The resulting assembly function is called from a C program, and based on its return value, the onboard LED blinks at different frequencies.
 
 This guide describes the required setup for building and flashing firmware to the Raspberry Pi Pico 2.
 
